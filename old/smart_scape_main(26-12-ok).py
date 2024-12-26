@@ -12,7 +12,6 @@ import tf2_ros
 import time
 import struct
 import serial
-import json
 
 # Helper functions (Your existing functions)
 def calculate_crc(data):
@@ -59,20 +58,6 @@ class RobotArmController(Node):
             '/rm_driver/movel_cmd',
             10
         )
-        
-        # Load parameters from JSON file
-        self.positions = self.load_positions_from_json('parameters.json')
-
-    def load_positions_from_json(self, file_path):
-        """Load position data from a JSON file."""
-        try:
-            with open(file_path, 'r') as file:
-                data = json.load(file)
-            self.get_logger().info("Successfully loaded positions from JSON file.")
-            return data.get("positions", {})
-        except Exception as e:
-            self.get_logger().error(f"Failed to load positions from JSON file: {e}")
-            return {}
 
     def position_callback(self, msg):
         """Callback to store the current position of the robot arm."""
@@ -133,25 +118,6 @@ class RobotArmController(Node):
         pose.orientation.w = 0.00880299974232912
         self.send_linear_motion(pose, speed=100, block=True)
 
-    def go_to_cup_position(self, cup_ID):
-        """Move to the position specified for a cup (A or B)."""
-        position_data = self.positions.get(f"cup_{cup_ID}", {})
-        if not position_data:
-            self.get_logger().error(f"No position data found for cup {cup_ID}.")
-            return
-
-        pose = Pose()
-        pose.position.x = position_data.get("x", 0.0)
-        pose.position.y = position_data.get("y", 0.0)
-        pose.position.z = 0.25126200914382935
-        # Set default orientation or load from JSON if needed
-        pose.orientation.x = 0.9998310208320618
-        pose.orientation.y = -0.010149000212550163
-        pose.orientation.z = 0.012520000338554382
-        pose.orientation.w = 0.00880299974232912
-
-        self.send_linear_motion(pose, speed=100, block=True)
-    
     def go_to_cup_A_position(self):
         pose = Pose()
         pose.position.x = -0.418300986289978
@@ -279,11 +245,10 @@ class LegoTracker(Node):
             y_offset = block["y_offset"]
             x_size = block["x_size"]
             y_size = block["y_size"]
-            label = block["label"]
             self.get_logger().info(f" x_size: {x_size}")
             self.get_logger().info(f" y_size: {y_size}")
             if block_id not in self.blocks:
-                self.blocks[block_id] = {"x": x_offset, "y": y_offset, "y_size": y_size,"label": label, "time": current_time}
+                self.blocks[block_id] = {"x": x_offset, "y": y_offset, "y_size": y_size, "time": current_time}
 
     def update_blocks(self):
         current_time = self.get_clock().now()
@@ -291,7 +256,6 @@ class LegoTracker(Node):
             start_x = self.blocks[block_id]["x"]
             start_y = self.blocks[block_id]["y"]
             y_size = self.blocks[block_id]["y_size"]
-            label = self.blocks[block_id]["label"]
             time_elapsed = current_time - self.blocks[block_id]["time"]
             # Convert time_elapsed from Duration to seconds (float)
             time_elapsed_seconds = time_elapsed.nanoseconds / 1e9
@@ -313,7 +277,7 @@ class LegoTracker(Node):
                 time.sleep(1)
                 self.gripper_controller.set_position(1) #gripper close
                 time.sleep(0.3)
-                self.arm_controller.go_to_cup_position(label)
+                self.arm_controller.go_to_cup_A_position()
                 time.sleep(1)
                 self.gripper_controller.set_position(0) #gripper open
                 self.arm_controller.go_up_from_mid_belt_position()
