@@ -106,23 +106,10 @@ class RobotArmController(Node):
         self.send_linear_motion(pose, speed=20, block=True)
 
     def go_to_mid_belt_position(self, y_offset, z_offset, rotation):
-        """Move to the position specified for belt_center_down ."""
-        belt_center_down_pos_data = self.positions.get(f"belt_center_down", {})
-        if not belt_center_down_pos_data:
-            self.get_logger().error(f"No position data found for belt_center_down.")
-            return
-        
         pose = Pose()
-        """ #Original
         pose.position.x = -0.4330799877643585 + y_offset
         pose.position.y = -0.048670001327991486
-        pose.position.z = 0.2012850046157837 + z_offset"""
-        
-        pose.position.x = -0.4430799877643585 + y_offset
-        #pose.position.x = belt_center_down_pos_data.get("x", 0.0) + y_offset
-        pose.position.y = belt_center_down_pos_data.get("y", 0.0)
-        pose.position.z = belt_center_down_pos_data.get("z", 0.0) + z_offset
-        
+        pose.position.z = 0.2012850046157837 + z_offset
         if rotation == 90:
             pose.orientation.x = 0.9998310208320618
             pose.orientation.y = -0.010149000212550163
@@ -136,20 +123,10 @@ class RobotArmController(Node):
         self.send_linear_motion(pose, speed=100, block=True)
         
     def go_up_from_mid_belt_position(self):
-        """Move to the position specified for belt_center_up ."""
-        belt_center_up_pos_data = self.positions.get(f"belt_center_up", {})
-        if not belt_center_up_pos_data:
-            self.get_logger().error(f"No position data found for belt_center_up.")
-            return
-        
         pose = Pose()
-        """ #Original
         pose.position.x = -0.4330799877643585 + 0.034
         pose.position.y = -0.048670001327991486
-        pose.position.z = 0.2012850046157837 + 0.05"""
-        pose.position.x = belt_center_up_pos_data.get("x", 0.0)
-        pose.position.y = belt_center_up_pos_data.get("y", 0.0)
-        pose.position.z = belt_center_up_pos_data.get("z", 0.0)
+        pose.position.z = 0.2012850046157837 + 0.05
         pose.orientation.x = 0.9998310208320618
         pose.orientation.y = -0.010149000212550163
         pose.orientation.z = 0.012520000338554382
@@ -157,7 +134,7 @@ class RobotArmController(Node):
         self.send_linear_motion(pose, speed=100, block=True)
 
     def go_to_cup_position(self, cup_ID):
-        """Move to the position specified for a cup (0, 1, 2 or 3)."""
+        """Move to the position specified for a cup (A or B)."""
         position_data = self.positions.get(f"cup_{cup_ID}", {})
         if not position_data:
             self.get_logger().error(f"No position data found for cup {cup_ID}.")
@@ -174,6 +151,29 @@ class RobotArmController(Node):
         pose.orientation.w = 0.00880299974232912
 
         self.send_linear_motion(pose, speed=100, block=True)
+    
+    def go_to_cup_A_position(self):
+        pose = Pose()
+        pose.position.x = -0.418300986289978
+        pose.position.y = 0.1383100003004074
+        pose.position.z = 0.25126200914382935
+        pose.orientation.x = 0.9998310208320618
+        pose.orientation.y = -0.010149000212550163
+        pose.orientation.z = 0.012520000338554382
+        pose.orientation.w = 0.00880299974232912
+        self.send_linear_motion(pose, speed=100, block=True)
+
+    def go_to_cup_B_position(self):
+        pose = Pose()
+        pose.position.x = -0.318300986289978
+        pose.position.y = 0.1383100003004074
+        pose.position.z = 0.25126200914382935
+        pose.orientation.x = 0.9998310208320618
+        pose.orientation.y = -0.010149000212550163
+        pose.orientation.z = 0.012520000338554382
+        pose.orientation.w = 0.00880299974232912
+        self.send_linear_motion(pose, speed=100, block=True)
+
 
 class TCPPacketSubscriber(Node):
     def __init__(self):
@@ -297,8 +297,8 @@ class LegoTracker(Node):
             time_elapsed_seconds = time_elapsed.nanoseconds / 1e9
             distance_moved = self.belt_speed / 1000.0 * time_elapsed_seconds
             
-            #starting_x_shift = start_y / 8  #   original 10 >>> 8     pix val / 10 = mm >>>>>  (pix val / 10) /1000
-            starting_x_shift_belt = start_y / 10 # 
+            starting_x_shift = start_y / 8  #   original 10 >>> 8     pix val / 10 = mm >>>>>  (pix val / 10) /1000
+            starting_x_shift_belt = start_y / 10
             
             
             if distance_moved > self.block_lifetime :
@@ -306,7 +306,7 @@ class LegoTracker(Node):
                 continue
             
             if distance_moved > self.pickup_boundary :
-                if y_size > 0.3 : # large
+                if y_size > 0.2 : # large
                     self.arm_controller.go_to_mid_belt_position(starting_x_shift_belt,0.0,0) ##  original 0 >>> 90
                 else:
                     self.arm_controller.go_to_mid_belt_position(starting_x_shift_belt,0.0,90)   ##(starting_x_shift,90)
@@ -335,9 +335,9 @@ class LegoTracker(Node):
             tf_msg = TransformStamped()
             tf_msg.header.stamp = self.get_clock().now().to_msg()
             tf_msg.header.frame_id = "baselink"
-            tf_msg.child_frame_id = f"lego-{block_id} : label-{label}"
+            tf_msg.child_frame_id = f"lego_{block_id}"
             
-            tf_msg.transform.translation.x = -0.45 + starting_x_shift_belt    ## arm base belt mid line dis on rviz  -0.4 for mid belt /////  -0.4 - 0.05 = -0.45
+            tf_msg.transform.translation.x = -0.45 + starting_x_shift    ## arm base belt mid line dis on rviz  -0.4 for mid belt /////  -0.4 - 0.05 = -0.45
             tf_msg.transform.translation.y = current_x 
             tf_msg.transform.translation.z = 0.12 # belt height
             tf_msg.transform.rotation.w = 1.0
