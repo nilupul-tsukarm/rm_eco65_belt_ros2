@@ -288,19 +288,20 @@ class LegoTracker(Node):
             #starting_x_shift = start_y / 8  #   original 10 >>> 8     pix val / 10 = mm >>>>>  (pix val / 10) /1000
             starting_x_shift_belt = start_y / 10 # 
             
+            #self.pickup_boundary = 0.295   ## main abjustment point  0.28>>
+            
+            if label == 0 or label == 1:
+                self.pickup_boundary = 0.295 - 0.035
+                print("label 0 0r 1 speed mode")
+            else:
+                self.pickup_boundary = 0.295
+                print("label 2 0r 3 normal mode")
+            
             if "processed" not in block:
                 block["processed"] = False
             
             print("dis = ", distance_moved)
             
-            #self.pickup_boundary = 0.295   ## main abjustment point  0.28>>
-            
-            if label == 0 or label == 1:
-                self.pickup_boundary = 0.295 - 0.015
-                print("label 0 0r 1 speed mode")
-            else:
-                self.pickup_boundary = 0.295
-                print("label 2 0r 3 normal mode")
             
             if not block["processed"] and self.pickup_boundary/2 < distance_moved:
                 block["processed"] = True
@@ -311,10 +312,12 @@ class LegoTracker(Node):
                     print("ready no rotate")
                     self.arm_controller.go_to_mid_belt_position(starting_x_shift_belt,0.017,90)
             
+            
+            
             if self.pickup_boundary < distance_moved :
                 if y_size > 0.3 : # large
                     print("go down rotate")
-                    time.sleep(0.7)
+                    time.sleep(0.5)
                     self.arm_controller.go_to_mid_belt_position(starting_x_shift_belt,0.0,0)
                     time.sleep(0.1)
                     self.gripper_controller.set_position(1) #gripper close

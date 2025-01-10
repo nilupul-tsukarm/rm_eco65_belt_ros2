@@ -93,6 +93,18 @@ class RobotArmController(Node):
         self.publisher.publish(command)
         self.get_logger().info(f"Sent linear motion command to position: {pose.position}")
 
+    # Define methods for specific movements
+    def go_to_initial_position(self):
+        pose = Pose()
+        pose.position.x = -0.2401369959115982
+        pose.position.y = -0.04086500033736229
+        pose.position.z = 0.4443739950656891
+        pose.orientation.x = 0.9998310208320618
+        pose.orientation.y = -0.010149000212550163
+        pose.orientation.z = 0.012520000338554382
+        pose.orientation.w = 0.00880299974232912
+        self.send_linear_motion(pose, speed=20, block=True)
+
     def go_to_mid_belt_position(self, y_offset, z_offset, rotation):
         """Move to the position specified for belt_center_down ."""
         belt_center_down_pos_data = self.positions.get(f"belt_center_down", {})
@@ -236,7 +248,8 @@ class LegoTracker(Node):
         self.belt_speed = 0.0
         self.z_offset = 0.2
         self.y_offset = -0.5   ## arm base belt mid line dis on rviz
-        self.block_lifetime = 0.3   # .6m  
+        self.block_lifetime = 0.4   # .6m 
+        self.pickup_boundary = 0.28   ## main abjustment point 
         self.blocks = {}
         
         # Timer to periodically update blocks
@@ -275,11 +288,10 @@ class LegoTracker(Node):
     def update_blocks(self):
         current_time = self.get_clock().now()
         for block_id in list(self.blocks.keys()):
-            block = self.blocks[block_id]
-            start_x = block["x"]
-            start_y = block["y"]
-            y_size = block["y_size"]
-            label = block["label"]
+            start_x = self.blocks[block_id]["x"]
+            start_y = self.blocks[block_id]["y"]
+            y_size = self.blocks[block_id]["y_size"]
+            label = self.blocks[block_id]["label"]
             time_elapsed = current_time - self.blocks[block_id]["time"]
             # Convert time_elapsed from Duration to seconds (float)
             time_elapsed_seconds = time_elapsed.nanoseconds / 1e9
@@ -288,60 +300,30 @@ class LegoTracker(Node):
             #starting_x_shift = start_y / 8  #   original 10 >>> 8     pix val / 10 = mm >>>>>  (pix val / 10) /1000
             starting_x_shift_belt = start_y / 10 # 
             
-            if "processed" not in block:
-                block["processed"] = False
             
-            print("dis = ", distance_moved)
+            if distance_moved > self.block_lifetime :
+                del self.blocks[block_id]
+                continue
             
-            #self.pickup_boundary = 0.295   ## main abjustment point  0.28>>
-            
-            if label == 0 or label == 1:
-                self.pickup_boundary = 0.295 - 0.015
-                print("label 0 0r 1 speed mode")
-            else:
-                self.pickup_boundary = 0.295
-                print("label 2 0r 3 normal mode")
-            
-            if not block["processed"] and self.pickup_boundary/2 < distance_moved:
-                block["processed"] = True
+            if distance_moved > self.pickup_boundary :
                 if y_size > 0.3 : # large
-                    print("ready rotate")
-                    self.arm_controller.go_to_mid_belt_position(starting_x_shift_belt,0.017,0) ##  original 0 >>> 90
+                    self.arm_controller.go_to_mid_belt_position(starting_x_shift_belt,0.0,0) ##  original 0 >>> 90
                 else:
-                    print("ready no rotate")
-                    self.arm_controller.go_to_mid_belt_position(starting_x_shift_belt,0.017,90)
-            
-            if self.pickup_boundary < distance_moved :
-                if y_size > 0.3 : # large
-                    print("go down rotate")
-                    time.sleep(0.7)
-                    self.arm_controller.go_to_mid_belt_position(starting_x_shift_belt,0.0,0)
-                    time.sleep(0.1)
-                    self.gripper_controller.set_position(1) #gripper close
-                    time.sleep(0.3)
-                    self.arm_controller.go_to_cup_position(label)
-                    time.sleep(1)
-                    self.gripper_controller.set_position(0) #gripper open
-                    self.arm_controller.go_up_from_mid_belt_position()
-                    del self.blocks[block_id]
-                else:
-                    ("go down no rotate")
                     self.arm_controller.go_to_mid_belt_position(starting_x_shift_belt,0.0,90)   ##(starting_x_shift,90)
-                    time.sleep(0.1)
-                    self.gripper_controller.set_position(1) #gripper close
-                    time.sleep(0.3)
-                    self.arm_controller.go_to_cup_position(label)
-                    time.sleep(1)
-                    self.gripper_controller.set_position(0) #gripper open
-                    self.arm_controller.go_up_from_mid_belt_position()
-                    del self.blocks[block_id]
-                
+                time.sleep(1)
+                self.gripper_controller.set_position(1) #gripper close
+                time.sleep(0.3)
+                #print("Label:  ", label)
+                self.arm_controller.go_to_cup_position(label)
+                time.sleep(1)
+                self.gripper_controller.set_position(0) #gripper open
+                self.arm_controller.go_up_from_mid_belt_position()
+                del self.blocks[block_id]
             
             start_point_x = - 0.5
             
-            starting_y_shift_belt = start_x / 10
-            current_x = start_point_x + starting_y_shift_belt + distance_moved
-            #current_x = start_point_x + distance_moved
+            #current_x = start_point_x + start_x + distance_moved
+            current_x = start_point_x + distance_moved
              
             point_msg = PointStamped()
             point_msg.header.stamp = self.get_clock().now().to_msg()
