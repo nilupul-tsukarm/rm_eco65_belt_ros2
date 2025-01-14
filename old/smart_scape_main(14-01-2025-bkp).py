@@ -106,8 +106,8 @@ class RobotArmController(Node):
         pose.position.y = -0.048670001327991486
         pose.position.z = 0.2012850046157837 + z_offset"""
         
-        #pose.position.x = -0.4430799877643585 + y_offset ## edge value  -0.4330799877643585,
-        pose.position.x = belt_center_down_pos_data.get("x", 0.0) + y_offset
+        pose.position.x = -0.4430799877643585 + y_offset
+        #pose.position.x = belt_center_down_pos_data.get("x", 0.0) + y_offset
         pose.position.y = belt_center_down_pos_data.get("y", 0.0)
         pose.position.z = belt_center_down_pos_data.get("z", 0.0) + z_offset
         
@@ -250,6 +250,7 @@ class LegoTracker(Node):
         
     def block_data_callback(self, msg):
         """Handle incoming block data from TCPPacketSubscriber."""
+        #self.get_logger().info(f" XXXXX XXXX XXXX block_data_callback: {msg}")
         try:
             block_data = json.loads(msg.data)
             self.track_blocks(block_data)
@@ -285,20 +286,7 @@ class LegoTracker(Node):
             distance_moved = self.belt_speed / 1000.0 * time_elapsed_seconds
             
             #starting_x_shift = start_y / 8  #   original 10 >>> 8     pix val / 10 = mm >>>>>  (pix val / 10) /1000
-            starting_x_shift_belt = start_y / 10 # beli wide effect
-            starting_y_shift_belt = start_x / 10 # detectin time effect
-            print("starting_y_shift_belt >> ",starting_y_shift_belt)
-            
-            if(starting_y_shift_belt>0.4):
-                print("after line")
-                self.pickup_boundary = 0.295 - starting_y_shift_belt
-                print("decreesd new pickup_boundary >> ",self.pickup_boundary)
-            else:
-                print("before line")
-                self.pickup_boundary = 0.295 + starting_y_shift_belt/2
-                print("incressd new pickup_boundary >> ",self.pickup_boundary)
-            
-            
+            starting_x_shift_belt = start_y / 10 # 
             
             if "processed" not in block:
                 block["processed"] = False
@@ -307,6 +295,12 @@ class LegoTracker(Node):
             
             #self.pickup_boundary = 0.295   ## main abjustment point  0.28>>
             
+            if label == 0 or label == 1:
+                self.pickup_boundary = 0.295 - 0.015
+                print("label 0 0r 1 speed mode")
+            else:
+                self.pickup_boundary = 0.295
+                print("label 2 0r 3 normal mode")
             
             if not block["processed"] and self.pickup_boundary/2 < distance_moved:
                 block["processed"] = True
@@ -343,10 +337,11 @@ class LegoTracker(Node):
                     del self.blocks[block_id]
                 
             
-            start_point_x = - 0.35
+            start_point_x = - 0.5
             
-            #current_x = start_point_x + starting_y_shift_belt + distance_moved
-            current_x = start_point_x + distance_moved
+            starting_y_shift_belt = start_x / 10
+            current_x = start_point_x + starting_y_shift_belt + distance_moved
+            #current_x = start_point_x + distance_moved
              
             point_msg = PointStamped()
             point_msg.header.stamp = self.get_clock().now().to_msg()
