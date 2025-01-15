@@ -289,15 +289,13 @@ class LegoTracker(Node):
             starting_y_shift_belt = start_x / 10 # detectin time effect
             print("starting_y_shift_belt >> ",starting_y_shift_belt)
             
-            if(starting_y_shift_belt>0.05):
+            if(starting_y_shift_belt>0.4):
                 print("after line")
-                #self.pickup_boundary = 0.295 - starting_y_shift_belt/5
-                self.pickup_boundary = 0.29 - starting_y_shift_belt/5
+                self.pickup_boundary = 0.295 - starting_y_shift_belt
                 print("decreesd new pickup_boundary >> ",self.pickup_boundary)
             else:
                 print("before line")
-                #self.pickup_boundary = 0.295 + starting_y_shift_belt/5
-                self.pickup_boundary = 0.29 + starting_y_shift_belt/5
+                self.pickup_boundary = 0.295 + starting_y_shift_belt/2
                 print("incressd new pickup_boundary >> ",self.pickup_boundary)
             
             
@@ -308,12 +306,11 @@ class LegoTracker(Node):
             print("dis = ", distance_moved)
             
             #self.pickup_boundary = 0.295   ## main abjustment point  0.28>>
-            print("size = ", y_size) 
             
             
             if not block["processed"] and self.pickup_boundary/2 < distance_moved:
                 block["processed"] = True
-                if y_size > 0.26 : # large
+                if y_size > 0.3 : # large
                     print("ready rotate")
                     self.arm_controller.go_to_mid_belt_position(starting_x_shift_belt,0.017,0) ##  original 0 >>> 90
                 else:
@@ -321,7 +318,7 @@ class LegoTracker(Node):
                     self.arm_controller.go_to_mid_belt_position(starting_x_shift_belt,0.017,90)
             
             if self.pickup_boundary < distance_moved :
-                if y_size > 0.26 : # large
+                if y_size > 0.3 : # large
                     print("go down rotate")
                     time.sleep(0.7)
                     self.arm_controller.go_to_mid_belt_position(starting_x_shift_belt,0.0,0)
@@ -425,7 +422,7 @@ class GripperControlNode(Node):
 
     def set_position(self, state):
         if state :  # 1 = true open
-            decimal_value = 600
+            decimal_value = 100
         else:
             decimal_value = 1000
         hex_value = decimal_to_hex(decimal_value)
