@@ -292,12 +292,12 @@ class LegoTracker(Node):
             if(starting_y_shift_belt>0.05):
                 print("after line")
                 #self.pickup_boundary = 0.295 - starting_y_shift_belt/5
-                self.pickup_boundary = 0.295 - starting_y_shift_belt/5
+                self.pickup_boundary = 0.29 - starting_y_shift_belt/5
                 print("decreesd new pickup_boundary >> ",self.pickup_boundary)
             else:
                 print("before line")
                 #self.pickup_boundary = 0.295 + starting_y_shift_belt/5
-                self.pickup_boundary = 0.295 + starting_y_shift_belt/5
+                self.pickup_boundary = 0.29 + starting_y_shift_belt/5
                 print("incressd new pickup_boundary >> ",self.pickup_boundary)
             
             
@@ -321,10 +321,6 @@ class LegoTracker(Node):
                     self.arm_controller.go_to_mid_belt_position(starting_x_shift_belt,0.017,90)
             
             if self.pickup_boundary < distance_moved :
-                if(label=="1"):
-                    rotate_trigger_vallue = 0.26
-                else:
-                    rotate_trigger_vallue = 0.3
                 if y_size > 0.26 : # large
                     print("go down rotate")
                     time.sleep(0.7)
@@ -339,10 +335,7 @@ class LegoTracker(Node):
                     del self.blocks[block_id]
                 else:
                     ("go down no rotate")
-                    time.sleep(0.2) ### adding litte late
-                    if(label=="0"):
-                        print("label 0 late ")
-                        time.sleep(0.1)
+                    time.sleep(0.1) ### adding litte late
                     self.arm_controller.go_to_mid_belt_position(starting_x_shift_belt,0.0,90)   ##(starting_x_shift,90)
                     time.sleep(0.1) 
                     self.gripper_controller.set_position(1) #gripper close
@@ -433,7 +426,7 @@ class GripperControlNode(Node):
 
     def set_position(self, state):
         if state :  # 1 = true open
-            decimal_value = 200
+            decimal_value = 600
         else:
             decimal_value = 1000
         hex_value = decimal_to_hex(decimal_value)
